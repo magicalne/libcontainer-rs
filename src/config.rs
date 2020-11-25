@@ -2,6 +2,9 @@ use std::collections::HashMap;
 
 use serde::{Serialize, Deserialize};
 
+use super::Result;
+
+use crate::LibContainerError;
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
@@ -59,8 +62,6 @@ pub struct Linux {
     intel_rdt: Option<LinuxIntelRdt>,
     personality: Option<LinuxPersonality>
 }
-
-
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxPersonality {
@@ -291,6 +292,19 @@ pub struct ConsoleSize {
     width: u32
 }
 
+impl Config {
+    pub fn read_file(file_path: &str) -> Result<Config> {
+        let mut file = std::fs::File::open(&file_path)
+            .map_err(|err| LibContainerError::IOError(err))?;
+        let mut buf = String::new();
+        let _ = std::io::Read::read_to_string(&mut file, &mut buf)
+            .map_err(|err| LibContainerError::IOError(err))?;
+        let config = serde_json::from_str(&buf)
+            .map_err(|err| LibContainerError::SerdeError(err));
+        return config
+    }
+}
+
 mod tests {
 
     #[test]
@@ -298,11 +312,8 @@ mod tests {
                     
         let mut path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path.push("config.json");
-        let mut file = std::fs::File::open(&path)?;
-        let mut buf = String::new();
-        let _ = std::io::Read::read_to_string(&mut file, &mut buf);
-        let config: super::Config  = serde_json::from_str(&buf).unwrap();
-        dbg!(config);
+        let config = super::Config::read_file(path.to_str().unwrap());
+        assert!(config.is_ok());
         Ok(())
     }
 }

@@ -1,6 +1,27 @@
-use std::{fs, io::Read, fs::metadata, path::{Path, PathBuf}};
+use std::{
+    fs,
+    path::{
+        Path, PathBuf
+    }
+};
 
-use nix::{mount::{mount, MsFlags}, mount::{umount2, MntFlags}, sched::{unshare, CloneFlags}, unistd::chdir, unistd::getuid, unistd::{fork, getgid, pivot_root}};
+use nix::{
+    mount::{
+        MntFlags, 
+        MsFlags,
+        mount,
+        umount2},
+        sched::{
+            unshare,
+            CloneFlags
+        },
+        unistd::chdir,
+        unistd::getuid,
+        unistd::{
+            fork, 
+            getgid,
+            pivot_root
+    }};
 
 use crate::{LibContainerError, Result};
 
