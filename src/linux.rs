@@ -23,7 +23,7 @@ use nix::{
             pivot_root
     }};
 
-use crate::{LibContainerError, Result};
+use crate::{config::Config, LibContainerError, Result};
 
 /**
 Linux 3.19 made a change in the handling of setgroups(2) and the
@@ -115,7 +115,39 @@ pub fn prepare_root_fs(container_id: &str, rootfs: &str) -> Result<()> {
     umount2(&oldrootfs_path, MntFlags::MNT_DETACH).map_err(|err| LibContainerError::NixError(err))?;
     fs::remove_dir_all(oldrootfs).expect("cannot remove dir"); //.map_err(|err| LibContainerError::IOError(err))?;
 
-    dbg!(std::env::current_dir());
+    Ok(())
+}
+
+pub fn run(container_id: String, config: &Config) {
+
+}
+
+pub fn init_namespace(config: &Config) -> Result<()> {
+    if let Some(linux) = config.linux.as_ref() {
+        if let Some(nss) = linux.namespaces.as_ref() {
+            let mut flag = 0;
+            nss.iter().for_each(|e| {
+                flag |= e.type_.transform().bits();
+            });
+            if let Some(flag) = CloneFlags::from_bits(flag) {
+                let _ = unshare(flag).map_err(|err| LibContainerError::NixError(err))?;
+            }
+        }
+    }
+    Ok(())
+}
+
+pub fn init_mount(config: &Config) -> Result<()> {
+    if let Some(mounts) = config.mounts.as_ref() {
+        for m in mounts.iter() {
+            let data = match m.options.as_ref() {
+                Some(arr) => Some(arr.join(",")),
+                None => None
+            };
+            mount(m.source.as_deref(), m.destination.as_str(), m.type_.as_deref(), MsFlags::empty(), data.as_deref())
+                .map_err(|err| LibContainerError::NixError(err))?;
+        }
+    }
     Ok(())
 }
 

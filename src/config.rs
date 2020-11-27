@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use serde::{Serialize, Deserialize};
+use nix::sched::CloneFlags;
+use serde::{Deserialize, Serialize};
 
 use super::Result;
 
@@ -8,300 +9,322 @@ use crate::LibContainerError;
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
-    oci_version: String,
-    process: Option<Process>,
-    root: Option<Root>,
-    hostname: Option<String>,
-    mounts: Option<Vec<Mount>>,
-    hooks: Option<Hooks>,
-    annotations: HashMap<String, String>,
+    pub oci_version: String,
+    pub process: Option<Process>,
+    pub root: Option<Root>,
+    pub hostname: Option<String>,
+    pub mounts: Option<Vec<Mount>>,
+    pub hooks: Option<Hooks>,
+    pub annotations: HashMap<String, String>,
 
-    linux: Option<Linux>,
+    pub linux: Option<Linux>,
     // TODO solaris and windows
-
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VMHypervisor {
-    path: String,
-    parameters: Option<Vec<String>>
+    pub path: String,
+    pub parameters: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VMKernel {
-    path: String,
-    parameters: Option<Vec<String>>,
-    initrd: Option<String>
+    pub path: String,
+    pub parameters: Option<Vec<String>>,
+    pub initrd: Option<String>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VMImage {
-    path: String,
-    format: String
+    pub path: String,
+    pub format: String,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VM {
-    hypervisor: Option<VMHypervisor>,
-    kernel: VMKernel,
-    image: Option<VMImage>
+    pub hypervisor: Option<VMHypervisor>,
+    pub kernel: VMKernel,
+    pub image: Option<VMImage>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Linux {
-    uid_mappings: Option<Vec<LinuxIDMapping>>,
-    gid_mappings: Option<Vec<LinuxIDMapping>>,
-    sysctl: Option<HashMap<String, String>>,
-    resources: Option<LinuxResuources>,
-    cgroup_path: Option<String>,
-    namespaces: Option<Vec<LinuxNamespace>>,
-    devices: Option<Vec<LinuxDevice>>,
-    seccomp: Option<LinuxSeccomp>,
-    rootfs_propagation: Option<String>,
-    masked_paths: Option<Vec<String>>,
-    readonly_paths: Option<Vec<String>>,
-    mount_label: Option<String>,
-    intel_rdt: Option<LinuxIntelRdt>,
-    personality: Option<LinuxPersonality>
+    pub uid_mappings: Option<Vec<LinuxIDMapping>>,
+    pub gid_mappings: Option<Vec<LinuxIDMapping>>,
+    pub sysctl: Option<HashMap<String, String>>,
+    pub resources: Option<LinuxResuources>,
+    pub cgroup_path: Option<String>,
+    pub namespaces: Option<Vec<LinuxNamespace>>,
+    pub devices: Option<Vec<LinuxDevice>>,
+    pub seccomp: Option<LinuxSeccomp>,
+    pub rootfs_propagation: Option<String>,
+    pub masked_paths: Option<Vec<String>>,
+    pub readonly_paths: Option<Vec<String>>,
+    pub mount_label: Option<String>,
+    pub intel_rdt: Option<LinuxIntelRdt>,
+    pub personality: Option<LinuxPersonality>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxPersonality {
-    domain: String,
-    flags: Option<Vec<String>>
+    pub domain: String,
+    pub flags: Option<Vec<String>>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxIntelRdt {
-    #[serde(rename = "closID")] 
-    clos_id: Option<String>,
-    l3_cache_schema: Option<String>,
-    mem_bw_schema: Option<String>
+    #[serde(rename = "closID")]
+    pub clos_id: Option<String>,
+    pub l3_cache_schema: Option<String>,
+    pub mem_bw_schema: Option<String>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxSyscall {
-    names: Vec<String>,
-    action: String,
-    errno_ret: Option<u32>,
-    args: Option<Vec<String>>
+    pub names: Vec<String>,
+    pub action: String,
+    pub errno_ret: Option<u32>,
+    pub args: Option<Vec<String>>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxSeccomp {
-    #[serde(rename = "defaultAction")] 
-    default_action: String,
-    architectures: Option<Vec<String>>,
-    flags: Option<Vec<String>>,
-    syscalls: Option<Vec<LinuxSyscall>>
+    #[serde(rename = "defaultAction")]
+    pub default_action: String,
+    pub architectures: Option<Vec<String>>,
+    pub flags: Option<Vec<String>>,
+    pub syscalls: Option<Vec<LinuxSyscall>>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum NamespaceType {
+    Pid,
+    Network,
+    Ipc,
+    Uts,
+    Mount,
+    User,
+    Cgroup
+}
+
+impl NamespaceType {
+    pub fn transform(&self) -> CloneFlags {
+       match self {
+            NamespaceType::Pid => CloneFlags::CLONE_NEWPID,
+            NamespaceType::Network => CloneFlags::CLONE_NEWNS,
+            NamespaceType::Ipc => CloneFlags::CLONE_NEWIPC,
+            NamespaceType::Uts => CloneFlags::CLONE_NEWUTS,
+            NamespaceType::Mount => CloneFlags::CLONE_NEWNS,
+            NamespaceType::User => CloneFlags::CLONE_NEWUSER,
+            NamespaceType::Cgroup => CloneFlags::CLONE_NEWCGROUP,
+        }
+    }
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxNamespace {
-    #[serde(rename = "type")] 
-    type_: String,
-    path: Option<String>
+    #[serde(rename = "type")]
+    pub type_: NamespaceType,
+    pub path: Option<String>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxIDMapping {
-    #[serde(rename = "containerID")] 
-    container_id: u32,
-    #[serde(rename = "hostID")] 
-    host_id: u32,
-    size: u32
+    #[serde(rename = "containerID")]
+    pub container_id: u32,
+    #[serde(rename = "hostID")]
+    pub host_id: u32,
+    pub size: u32,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxResuources {
-    devices: Option<Vec<LinuxDeviceCgroup>>,
-    momory: Option<LinuxMemory>,
-    cpu: Option<LinuxCPU>,
-    pids: Option<LinuxPids>,
-    #[serde(rename = "blockIO")] 
-    block_io: Option<LinuxBlockIO>,
-    hugepage_limits: Option<Vec<LinuxHugePageLimit>>,
-    network: Option<LinuxNetwork>,
-    rdma: Option<HashMap<String, LinuxRdma>>,
-    unified: Option<HashMap<String, String>>
+    pub devices: Option<Vec<LinuxDeviceCgroup>>,
+    pub momory: Option<LinuxMemory>,
+    pub cpu: Option<LinuxCPU>,
+    pub pids: Option<LinuxPids>,
+    #[serde(rename = "blockIO")]
+    pub block_io: Option<LinuxBlockIO>,
+    pub hugepage_limits: Option<Vec<LinuxHugePageLimit>>,
+    pub network: Option<LinuxNetwork>,
+    pub rdma: Option<HashMap<String, LinuxRdma>>,
+    pub unified: Option<HashMap<String, String>>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxDeviceCgroup {
-    allow: bool,
-    #[serde(rename = "type")] 
-    type_: Option<String>,
-    major: Option<i64>,
-    minor: Option<i64>,
-    access: Option<String>
+    pub allow: bool,
+    #[serde(rename = "type")]
+    pub type_: Option<String>,
+    pub major: Option<i64>,
+    pub minor: Option<i64>,
+    pub access: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxMemory {
-    limit: Option<i64>,
-    reservation: Option<i64>,
-    swap: Option<i64>,
-    kernel: Option<i64>,
+    pub limit: Option<i64>,
+    pub reservation: Option<i64>,
+    pub swap: Option<i64>,
+    pub kernel: Option<i64>,
     #[serde(rename = "kernelTCP")]
-    kernel_tcp: Option<i64>,
-    swappiness: Option<u64>,
+    pub kernel_tcp: Option<i64>,
+    pub swappiness: Option<u64>,
     #[serde(rename = "disableOOMKiller")]
-    disable_oom_killer: Option<bool>,
-    use_hierarchy: Option<bool>
+    pub disable_oom_killer: Option<bool>,
+    pub use_hierarchy: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxCPU {
-    shares: Option<u64>,
-    quota: Option<i64>,
-    period: Option<u64>,
-    realtime_runtime: Option<i64>,
-    realtime_period: Option<u64>,
-    cpus: Option<String>,
-    mems: Option<String>
+    pub shares: Option<u64>,
+    pub quota: Option<i64>,
+    pub period: Option<u64>,
+    pub realtime_runtime: Option<i64>,
+    pub realtime_period: Option<u64>,
+    pub cpus: Option<String>,
+    pub mems: Option<String>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxPids {
-    limit: i64
+    pub limit: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxNetwork {
-    #[serde(rename = "classID")] 
-    class_id: Option<u32>,
-    priorities: Option<Vec<LinuxInterfacePriority>>
+    #[serde(rename = "classID")]
+    pub class_id: Option<u32>,
+    pub priorities: Option<Vec<LinuxInterfacePriority>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxInterfacePriority {
-    name: String,
-    priority: u32
+    pub name: String,
+    pub priority: u32,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxRdma {
-    hca_handles: Option<u32>,
-    hca_objects: Option<u32>
+    pub hca_handles: Option<u32>,
+    pub hca_objects: Option<u32>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxBlockIO {
-    weight: Option<u16>,
-    leaf_weight: Option<u16>,
-    weight_device: Option<Vec<LinuxWeightDevice>>,
-    throttle_read_bps_device: Option<Vec<LinuxThrottleDevice>>,
-    throttle_write_bps_device: Option<Vec<LinuxThrottleDevice>>,
-    #[serde(rename = "throttleReadIOPSDevice")] 
-    throttle_read_iops_device: Option<Vec<LinuxThrottleDevice>>,
-    #[serde(rename = "throttleWriteIOPSDevice")] 
-    throttle_write_iops_device: Option<Vec<LinuxThrottleDevice>>
+    pub weight: Option<u16>,
+    pub leaf_weight: Option<u16>,
+    pub weight_device: Option<Vec<LinuxWeightDevice>>,
+    pub throttle_read_bps_device: Option<Vec<LinuxThrottleDevice>>,
+    pub throttle_write_bps_device: Option<Vec<LinuxThrottleDevice>>,
+    #[serde(rename = "throttleReadIOPSDevice")]
+    pub throttle_read_iops_device: Option<Vec<LinuxThrottleDevice>>,
+    #[serde(rename = "throttleWriteIOPSDevice")]
+    pub throttle_write_iops_device: Option<Vec<LinuxThrottleDevice>>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxWeightDevice {
-    major: i64,
-    minor: i64,
-    weight: Option<u16>,
-    leaf_weight: Option<u16>
+    pub major: i64,
+    pub minor: i64,
+    pub weight: Option<u16>,
+    pub leaf_weight: Option<u16>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxThrottleDevice {
-    major: i64,
-    minor: i64,
-    rate: u64
+    pub major: i64,
+    pub minor: i64,
+    pub rate: u64,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxHugePageLimit {
-    page_size: String,
-    limit: u64
+    pub page_size: String,
+    pub limit: u64,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxDevice {
-    path: String,
-    #[serde(rename = "type")] 
-    type_: Option<String>,
-    major: Option<i64>,
-    minor: Option<i64>,
-    file_mode: Option<u32>,
-    uid: Option<u32>,
-    gid: Option<u32>
+    pub path: String,
+    #[serde(rename = "type")]
+    pub type_: Option<String>,
+    pub major: Option<i64>,
+    pub minor: Option<i64>,
+    pub file_mode: Option<u32>,
+    pub uid: Option<u32>,
+    pub gid: Option<u32>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Hook {
-    path: String,
-    args: Option<Vec<String>>,
-    env: Option<Vec<String>>,
-    timeout: Option<i32>
+    pub path: String,
+    pub args: Option<Vec<String>>,
+    pub env: Option<Vec<String>>,
+    pub timeout: Option<i32>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Hooks {
-    prestart: Option<Vec<Hook>>,
-    create_runtime: Option<Vec<Hook>>,
-    create_container: Option<Vec<Hook>>,
-    start_container: Option<Vec<Hook>>,
-    post_start: Option<Vec<Hook>>,
-    post_stop: Option<Vec<Hook>>
+    pub prestart: Option<Vec<Hook>>,
+    pub create_runtime: Option<Vec<Hook>>,
+    pub create_container: Option<Vec<Hook>>,
+    pub start_container: Option<Vec<Hook>>,
+    pub post_start: Option<Vec<Hook>>,
+    pub post_stop: Option<Vec<Hook>>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Mount {
-    destination: String,
-    #[serde(rename = "type")] 
-    type_: Option<String>,
-    source: Option<String>,
-    options: Option<Vec<String>>
-
+    pub destination: String,
+    #[serde(rename = "type")]
+    pub type_: Option<String>,
+    pub source: Option<String>,
+    pub options: Option<Vec<String>>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Root {
-    path: String,
-    readonly: Option<bool>
+    pub path: String,
+    pub readonly: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct User {
-    uid: u32,
-    gid: u32,
-    umask: Option<u32>,
-    additional_gids: Option<Vec<u32>>,
-    username: Option<String>
+    pub uid: u32,
+    pub gid: u32,
+    pub umask: Option<u32>,
+    pub additional_gids: Option<Vec<u32>>,
+    pub username: Option<String>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Process {
-    terminal: Option<bool>,
-    console_size: Option<ConsoleSize>,
-    user: User,
-    args: Option<Vec<String>>,
-    command_line: Option<String>,
-    env: Option<Vec<String>>,
-    cwd: String,
-    capabilities: LinuxCapabilities,
-    r_limits: Option<POSIXRlimit>,
-    no_new_privileges: Option<bool>,
-    apparmor_profile: Option<String>,
-    oom_score_adj: Option<i32>,
-    selinux_label: Option<String>
+    pub terminal: Option<bool>,
+    pub console_size: Option<ConsoleSize>,
+    pub user: User,
+    pub args: Option<Vec<String>>,
+    pub command_line: Option<String>,
+    pub env: Option<Vec<String>>,
+    pub cwd: String,
+    pub capabilities: LinuxCapabilities,
+    pub r_limits: Option<POSIXRlimit>,
+    pub no_new_privileges: Option<bool>,
+    pub apparmor_profile: Option<String>,
+    pub oom_score_adj: Option<i32>,
+    pub selinux_label: Option<String>,
 }
-
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct POSIXRlimit {
-    #[serde(rename = "type")] 
-    type_: String,
-    hard: usize,
-    soft: usize
+    #[serde(rename = "type")]
+    pub type_: String,
+    pub hard: usize,
+    pub soft: usize,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinuxCapabilities {
-    bounding: Option<Vec<String>>,
-    effective: Option<Vec<String>>,
-    inheritable: Option<Vec<String>>,
-    permitted: Option<Vec<String>>,
-    ambient: Option<Vec<String>>
+    pub bounding: Option<Vec<String>>,
+    pub effective: Option<Vec<String>>,
+    pub inheritable: Option<Vec<String>>,
+    pub permitted: Option<Vec<String>>,
+    pub ambient: Option<Vec<String>>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ConsoleSize {
-    height: u32,
-    width: u32
+    pub height: u32,
+    pub width: u32,
 }
 
 impl Config {
     pub fn read_file(file_path: &str) -> Result<Config> {
-        let mut file = std::fs::File::open(&file_path)
-            .map_err(|err| LibContainerError::IOError(err))?;
+        let mut file =
+            std::fs::File::open(&file_path).map_err(|err| LibContainerError::IOError(err))?;
         let mut buf = String::new();
         let _ = std::io::Read::read_to_string(&mut file, &mut buf)
             .map_err(|err| LibContainerError::IOError(err))?;
-        let config = serde_json::from_str(&buf)
-            .map_err(|err| LibContainerError::SerdeError(err));
-        return config
+        let config = serde_json::from_str(&buf).map_err(|err| LibContainerError::SerdeError(err));
+        return config;
     }
 }
 
@@ -309,7 +332,6 @@ mod tests {
 
     #[test]
     fn spec_test() -> std::io::Result<()> {
-                    
         let mut path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path.push("config.json");
         let config = super::Config::read_file(path.to_str().unwrap());

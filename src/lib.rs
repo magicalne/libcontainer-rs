@@ -1,5 +1,6 @@
 pub mod config;
 pub mod linux;
+pub mod container;
 use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum LibContainerError {
