@@ -15,7 +15,7 @@ pub struct Config {
     pub hostname: Option<String>,
     pub mounts: Option<Vec<Mount>>,
     pub hooks: Option<Hooks>,
-    pub annotations: HashMap<String, String>,
+    pub annotations: Option<HashMap<String, String>>,
 
     pub linux: Option<Linux>,
     // TODO solaris and windows
@@ -271,6 +271,7 @@ pub struct Root {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct User {
     pub uid: u32,
     pub gid: u32,
