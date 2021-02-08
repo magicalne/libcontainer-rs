@@ -2,3 +2,5 @@
 Cargo.lock
 /.idea
 *.iml
+
+/my_container
